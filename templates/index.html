@@ -1,1 +1,86 @@
-T
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Uptime Monitor</title>
+<style>
+body { font-family: Arial; background:#0f172a; color:white; padding:20px }
+input, button { padding:6px; margin:4px }
+table { width:100%; margin-top:20px; border-collapse: collapse }
+td, th { border:1px solid #334155; padding:8px; text-align:center }
+.up { color:#22c55e }
+.down { color:#ef4444 }
+</style>
+</head>
+<body>
+
+<h2>Uptime Monitor</h2>
+
+<form id="addForm">
+<input name="name" placeholder="Website Name" required>
+<input name="url" placeholder="https://example.com" required>
+<input name="interval" placeholder="Check time (seconds)" required>
+<button>Add</button>
+</form>
+
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>URL</th>
+<th>Status</th>
+<th>Next Check In</th>
+<th>Edit</th>
+</tr>
+</thead>
+<tbody id="list"></tbody>
+</table>
+
+<script>
+async function load() {
+    const res = await fetch("/data");
+    const data = await res.json();
+    const list = document.getElementById("list");
+    list.innerHTML = "";
+
+    data.forEach(d => {
+        list.innerHTML += `
+        <tr>
+            <td>${d.name}</td>
+            <td>${d.url}</td>
+            <td class="${d.status === 'UP' ? 'up':'down'}">${d.status}</td>
+            <td>${d.remaining}s</td>
+            <td>
+                <button onclick="edit(${d.id},'${d.name}','${d.url}',${d.interval})">Edit</button>
+            </td>
+        </tr>`;
+    });
+}
+
+document.getElementById("addForm").onsubmit = async e => {
+    e.preventDefault();
+    await fetch("/add", { method:"POST", body:new FormData(e.target) });
+    e.target.reset();
+    load();
+};
+
+function edit(id,name,url,interval){
+    const n = prompt("Name", name);
+    const u = prompt("URL", url);
+    const i = prompt("Interval (seconds)", interval);
+    if(!n||!u||!i) return;
+
+    const fd = new FormData();
+    fd.append("name", n);
+    fd.append("url", u);
+    fd.append("interval", i);
+
+    fetch("/edit/"+id,{method:"POST",body:fd}).then(load);
+}
+
+setInterval(load, 3000);
+load();
+</script>
+
+</body>
+</html>
