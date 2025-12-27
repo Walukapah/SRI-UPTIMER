@@ -48,8 +48,21 @@ def index():
 def data():
     urls = load_urls()
     now = time.time()
-    for u in urls:
-        u["remaining"] = max(0, int(u["next_check"] - now))
+
+    for site in urls:
+        if now >= site["next_check"]:
+            try:
+                r = requests.get(site["url"], timeout=10)
+                site["status"] = "UP" if r.status_code == 200 else "DOWN"
+            except:
+                site["status"] = "DOWN"
+
+            site["last_check"] = now
+            site["next_check"] = now + site["interval"]
+
+        site["remaining"] = max(0, int(site["next_check"] - now))
+
+    save_urls(urls)
     return jsonify(urls)
 
 @app.route("/add", methods=["POST"])
